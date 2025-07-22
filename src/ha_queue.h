@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2007,2008 Cybozu Labs, Inc.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 2 of the License.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -240,9 +240,9 @@ struct queue_connection_t;
 struct queue_compact_writer;
 
 class queue_share_t {
-  
+
 public:
-  
+
   struct append_t {
     const void *rows;
     size_t rows_size, row_count;
@@ -256,7 +256,7 @@ public:
     append_t& operator=(const append_t&);
   };
   typedef std::vector<append_t*> append_list_t;
-  
+
 #if Q4M_DELETE_METHOD != Q4M_DELETE_SERIAL_PWRITE && defined(FDATASYNC_SKIP)
 #else
   struct remove_t : public dllist<remove_t> {
@@ -270,7 +270,7 @@ public:
 # endif
   };
 #endif
-  
+
   struct cond_expr_t : public dllist<cond_expr_t> {
     queue_cond_t::node_t *node;
     char *expr;
@@ -297,7 +297,7 @@ public:
       delete this;
     }
   };
-  
+
   struct listener_t {
     pthread_cond_t cond;
     queue_connection_t *listener;
@@ -317,7 +317,7 @@ public:
     : l(_l), cond(c), queue_wait_index(qwi) {}
   };
   typedef std::list<listener_cond_t> listener_list_t;
-  
+
   struct info_t {
     queue_file_header_t _header;
     queue_connection_t *rows_owned;
@@ -334,21 +334,21 @@ public:
 #endif
     pthread_cond_t *do_compact_cond;
     bool is_dropping_table;
-    
+
     queue_cond_t cond_eval;
     cond_expr_t *active_cond_exprs;
     cond_expr_t *inactive_cond_exprs;
     size_t inactive_cond_expr_cnt;
     bool writer_exit;
-    
+
     size_t null_bytes;
     size_t fields;
     uchar *fixed_buf;
     size_t fixed_buf_size;
-    
+
     my_off_t rows_written;
     my_off_t rows_removed;
-    
+
     bool delete_is_running;
 
     info_t() : _header(), rows_owned(NULL), max_owned_row_off(0),
@@ -391,13 +391,13 @@ public:
       delete append_list;
     }
   };
-  
+
   struct cond_expr_reset_pos_t {
     void operator()(struct info_t *info, cond_expr_t& e) const {
       e.pos = 0;
     }
   };
-  
+
   struct stats_t {
     my_off_t wait_immediate_cnt;
     my_off_t wait_delayed_cnt;
@@ -406,12 +406,12 @@ public:
     my_off_t close_cnt;
     stats_t() : wait_immediate_cnt(0), wait_delayed_cnt(0), wait_timeout_cnt(0), abort_cnt(0), close_cnt(0) {}
   };
-  
+
 private:
   uint ref_cnt;
   char *table_name;
   uint table_name_length;
-  
+
   /* mutex:         used for many purposes
      mmap_mutex:    used for blocking remapping
      rwlock:        used to block compaction
@@ -420,9 +420,9 @@ private:
    */
   pthread_mutex_t compact_mutex;
   pthread_rwlock_t rwlock;
-  
+
   THR_LOCK store_lock;
-  
+
 #ifdef Q4M_USE_MMAP
   struct mmap_info_t {
     char *ptr;
@@ -431,22 +431,22 @@ private:
   };
   cac_rwlock_t<mmap_info_t> map;
 #endif
-  
+
   int fd;
 public:
   cac_mutex_t<info_t> info;
   cac_mutex_t<stats_t> *stats;
 private:
   cond_expr_t cond_expr_true;
-  
+
   listener_list_t listener_list; /* access serialized using listener_mutex */
-  
+
   pthread_t writer_thread;
   bool writer_do_wake_listeners;
-  
+
   /* following fields are for V2 type table only */
   queue_fixed_field_t **fixed_fields_;
-  
+
 public:
   void recalc_row_count(info_t *info, bool log);
   bool fixup_header(info_t *info);
@@ -467,7 +467,7 @@ public:
   }
   void unregister_listener(listener_t *l);
   bool wake_listeners(bool from_writer = false);
-  
+
   const char *get_table_name() const { return table_name; }
   THR_LOCK *get_store_lock() { return &store_lock; }
   queue_fixed_field_t * const *get_fixed_fields() const {
@@ -559,7 +559,7 @@ class ha_queue: public handler
 {
   THR_LOCK_DATA lock;
   queue_share_t *share;
-  
+
   my_off_t pos;
   uchar *rows;
   size_t rows_size, rows_reserved;
@@ -571,7 +571,7 @@ class ha_queue: public handler
  public:
   ha_queue(handlerton *hton, TABLE_SHARE *table_arg);
   ~ha_queue();
-  
+
   const char *table_type() const {
     return "QUEUE";
   }
@@ -586,7 +586,7 @@ class ha_queue: public handler
     return HA_NO_TRANSACTIONS | HA_UNUSED3 | HA_CAN_GEOMETRY
 #endif
       | HA_STATS_RECORDS_IS_EXACT | HA_CAN_BIT_FIELD
-      /* | HA_BINLOG_ROW_CAPABLE | HA_BINLOG_STMT_CAPABLE */ 
+      /* | HA_BINLOG_ROW_CAPABLE | HA_BINLOG_STMT_CAPABLE */
       | HA_FILE_BASED | HA_NO_AUTO_INCREMENT
 #if MYSQL_VERSION_ID < 80000
       | HA_HAS_RECORDS;
@@ -598,7 +598,7 @@ class ha_queue: public handler
   ulong index_flags(uint, uint, bool) const {
     return 0;
   }
-  
+
 #if MYSQL_VERSION_ID < 80000
   int open(const char *name, int mode, uint test_if_locked);
 #else
@@ -611,7 +611,7 @@ class ha_queue: public handler
   int rnd_next(uchar *buf);
   int rnd_pos(uchar *buf, uchar *_pos);
   void position(const uchar *record);
-  
+
   int info(uint);
   ha_rows records();
 #if MYSQL_VERSION_ID < 80000
@@ -620,18 +620,24 @@ class ha_queue: public handler
   int create(const char *name, TABLE *form, HA_CREATE_INFO *create_info, dd::Table *table_def);
 #endif
 
+#if MYSQL_VERSION_ID < 80000
+  int rename_table(const char *from, const char *to);
+#else
+  int rename_table(const char *from, const char *to, const dd::Table *from_table_def, dd::Table *to_table_def);
+#endif
+
   THR_LOCK_DATA **store_lock(THD *thd, THR_LOCK_DATA **to,
                              enum thr_lock_type lock_type);     ///< required
 #if MYSQL_VERSION_ID < 80000
   uint8 table_cache_type() { return HA_CACHE_TBL_NOCACHE; }
 #endif
-  
+
   void start_bulk_insert(ha_rows rows);
   int end_bulk_insert();
-  
+
   bool start_bulk_delete();
   int end_bulk_delete();
-  
+
   int write_row(uchar *buf);
   int update_row(const uchar *old_data, uchar *new_data);
   int delete_row(const uchar *buf);

@@ -1,15 +1,15 @@
 /*
  * Copyright (C) 2007,2008 Cybozu Labs, Inc.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; version 2 of the License.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -283,10 +283,10 @@ static cac_mutex_t<queue_share_t::stats_t>* get_stats_for(const char* _name,
 							  bool remove = false)
 {
   static map<string, cac_mutex_t<queue_share_t::stats_t>*> stats;
-  
+
   string name(_name);
   cac_mutex_t<queue_share_t::stats_t>* ret = NULL;
-  
+
   pthread_mutex_lock(&tbl_stat_mutex);
   map<string, cac_mutex_t<queue_share_t::stats_t>*>::iterator i
     = stats.lower_bound(name);
@@ -305,7 +305,7 @@ static cac_mutex_t<queue_share_t::stats_t>* get_stats_for(const char* _name,
     }
   }
   pthread_mutex_unlock(&tbl_stat_mutex);
-  
+
   return ret;
 }
 
@@ -313,7 +313,7 @@ my_off_t queue_row_t::validate_checksum(int fd, my_off_t off)
 {
   my_off_t off_end;
   char _len[sizeof(my_off_t)];
-  
+
   /* read checksum size */
   off += queue_row_t::header_size();
   if (sys_pread(fd, _len, sizeof(_len), off) != sizeof(_len)) {
@@ -375,16 +375,16 @@ queue_row_t *queue_row_t::create_checksum(const iovec* iov, int iovcnt)
 {
   my_off_t sz = 0;
   uint32_t adler = 1;
-  
+
   for (int i = 0; i < iovcnt; i++) {
     adler = adler32(adler, iov[i].iov_base, iov[i].iov_len);
     sz += iov[i].iov_len;
   }
-  
+
   queue_row_t *row =
     static_cast<queue_row_t*>(q4m_my_malloc(checksum_size(), MYF(0)));
   create_checksum(row, sz, adler);
-  
+
   return row;
 }
 
@@ -416,7 +416,7 @@ my_off_t queue_file_header_t::size() const
       == queue_row_t::type_checksum) {                                  \
     return sz;                                                          \
   }
-  
+
   CHECK_AND_RETURN(HEADER_SIZE_0_9_6);
   CHECK_AND_RETURN(HEADER_SIZE_0_9_7);
 #undef CHECK_AND_RETURN
@@ -436,7 +436,7 @@ void queue_share_t::recalc_row_count(info_t *info, bool log)
 {
   my_off_t off = info->_header.begin(), row_count = 0, bytes_total = 0,
     bytes_removed = 0;
-  
+
   while (off != info->_header.end()) {
     queue_row_t row;
     if (read(&row, off, queue_row_t::header_size())
@@ -564,7 +564,7 @@ bool queue_share_t::fixup_header(info_t *info)
 int queue_share_t::mmap_table(size_t new_size)
 {
   cac_rwlock_t<mmap_info_t>::writeref map(this->map);
-  
+
   if (map->ptr != NULL) {
     munmap(map->ptr, map->len);
     map->len = 0;
@@ -581,7 +581,7 @@ int queue_share_t::mmap_table(size_t new_size)
     return -1;
   }
   map->len = new_size;
-  
+
   return 0;
 }
 #endif
@@ -590,7 +590,7 @@ static char *parse_db_table_name(const char *db_table_name, char*& db,
                                  char*& table)
 {
   char *db_table_buf;
-  
+
   if ((db_table_buf = strdup(db_table_name)) == NULL) {
     log("out of memory\n");
     return NULL;
@@ -608,7 +608,7 @@ static char *parse_db_table_name(const char *db_table_name, char*& db,
     }
   }
   *table++ = '\0';
-  
+
   return db_table_buf;
  Error:
   free(db_table_buf);
@@ -619,24 +619,24 @@ static char *parse_db_table_name(const char *db_table_name, char*& db,
 static bool load_table51(TABLE *table, const char *db_table_name)
 {
   // precondition: LOCK_open should be acquired
-  
+
   TABLE_SHARE *share;
   TABLE_LIST table_list;
   char key[MAX_DBKEY_LENGTH];
   uint key_length;
   int err;
   char *db_table_buf;
-  
+
   memset(&table_list, 0, sizeof(TABLE_LIST));
   memset(table, 0, sizeof(TABLE));
-  
+
   /* copy table name to buffer and split to db name and table name */
   if ((db_table_buf = parse_db_table_name(db_table_name, table_list.db,
                                           table_list.table_name))
       == NULL) {
     return false;
   }
-  
+
   /* load table data */
   key_length = create_table_def_key(current_thd, key, &table_list, 0);
 #if MYSQL_VERSION_ID < 50500
@@ -654,11 +654,11 @@ static bool load_table51(TABLE *table, const char *db_table_name)
       != 0) {
     goto Error;
   }
-  
+
   /* free and return */
   free(db_table_buf);
   return true;
-  
+
  Error:
   free(db_table_buf);
   return false;
@@ -671,18 +671,18 @@ queue_share_t *queue_share_t::get_share(const char *table_name, bool if_is_open)
   uint table_name_length;
   char *tmp_name;
   char filename[FN_REFLEN];
-  
+
   pthread_mutex_lock(&open_mutex);
-  
+
 #if Q4M_DELETE_METHOD == Q4M_DELETE_MSYNC
   if (psz_mask == 0) {
     psz_mask = ~ static_cast<ptrdiff_t>(getpagesize() - 1);
     log("pagemask set to: %lx\n", psz_mask);
   }
 #endif
-  
+
   table_name_length = strlen(table_name);
-  
+
   /* return the one, if found (after incrementing refcount) */
 #ifdef Q4M_USE_MULTIMAP
   queue_open_tables2_type::const_iterator const iter = queue_open_tables2.find(std::string(table_name, table_name_length));
@@ -699,14 +699,14 @@ queue_share_t *queue_share_t::get_share(const char *table_name, bool if_is_open)
     pthread_mutex_unlock(&open_mutex);
     return NULL;
   }
-  
+
   /* alloc */
   if (q4m_my_multi_malloc(MYF(MY_WME | MY_ZEROFILL), &share, sizeof(queue_share_t),
 		      &tmp_name, table_name_length + 1, NullS)
       == NULL) {
     goto ERR_RETURN;
   }
-  
+
   /* init members that would always succeed in doing so */
   share->ref_cnt = 1;
   share->table_name = tmp_name;
@@ -734,7 +734,7 @@ queue_share_t *queue_share_t::get_share(const char *table_name, bool if_is_open)
     cond_expr_t(new queue_cond_t::const_node_t(queue_cond_t::value_t::int_value(1)),
 		"1", 1, 0, 0);
   new (&share->listener_list) listener_list_t();
-  
+
   { /* setup */
     cac_mutex_t<info_t>::lockref info(share->info);
     /* open file */
@@ -799,7 +799,7 @@ queue_share_t *queue_share_t::get_share(const char *table_name, bool if_is_open)
 #endif
   }
   share->stats = get_stats_for(table_name);
-  
+
   /* start threads */
   share->writer_do_wake_listeners = false;
   if (pthread_create(&share->writer_thread, NULL, _writer_start, share) != 0) {
@@ -817,12 +817,12 @@ queue_share_t *queue_share_t::get_share(const char *table_name, bool if_is_open)
     goto ERR_AFTER_WRITER_START;
   }
 #endif
-  
+
   /* success, unlock */
   pthread_mutex_unlock(&open_mutex);
-  
+
   return share;
-  
+
  ERR_AFTER_WRITER_START:
   {
     cac_mutex_t<info_t>::lockref info(share->info);
@@ -882,7 +882,7 @@ void queue_share_t::detach()
 void queue_share_t::release()
 {
   pthread_mutex_lock(&open_mutex);
-  
+
   if (--ref_cnt == 0) {
 #ifdef Q4M_USE_MULTIMAP
     queue_open_tables2_erase(this, std::string(this->table_name, this->table_name_length));
@@ -927,7 +927,7 @@ void queue_share_t::release()
     pthread_mutex_destroy(&compact_mutex);
     q4m_my_free(reinterpret_cast<uchar*>(this), MYF(0));
   }
-  
+
   pthread_mutex_unlock(&open_mutex);
 }
 
@@ -936,7 +936,7 @@ bool queue_share_t::init_fixed_fields()
   if (fixed_fields_ != NULL) {
     return true;
   }
-  
+
 #if MYSQL_VERSION_ID < 50500
   // lock order: LOCK_open -> info_t
   mysql_mutex_lock(&LOCK_open);
@@ -944,7 +944,7 @@ bool queue_share_t::init_fixed_fields()
     mysql_mutex_unlock(&LOCK_open);
     return true;
   }
-  
+
   TABLE table;
   if (fixed_fields_ != NULL) {
     mysql_mutex_unlock(&LOCK_open);
@@ -957,7 +957,7 @@ bool queue_share_t::init_fixed_fields()
   init_fixed_fields(&table);
   closefrm(&table, true);
   mysql_mutex_unlock(&LOCK_open);
-  
+
   return true;
 #else
   char *db, *tbl, *tmpbuf;
@@ -988,7 +988,7 @@ bool queue_share_t::init_fixed_fields()
   init_fixed_fields(table);
   intern_close_table(table);
   free(tmpbuf);
-  
+
   return true;
 #endif
 }
@@ -998,7 +998,7 @@ void queue_share_t::init_fixed_fields(TABLE *table)
   if (fixed_fields_ != NULL) {
     return;
   }
-  
+
   cac_mutex_t<info_t>::lockref info(this->info);
   if (fixed_fields_ != NULL) {
     return;
@@ -1062,7 +1062,7 @@ void queue_share_t::init_fixed_fields(TABLE *table)
 bool queue_share_t::lock_reader(bool from_queue_wait)
 {
   queue_connection_t *conn = queue_connection_t::current(true);
-  
+
   if (from_queue_wait) {
     if (conn->reader_lock_cnt != 0) {
       return false;
@@ -1070,7 +1070,7 @@ bool queue_share_t::lock_reader(bool from_queue_wait)
   } else {
     conn->reader_lock_cnt++;
   }
-  
+
   pthread_rwlock_rdlock(&rwlock);
   return true;
 }
@@ -1078,13 +1078,13 @@ bool queue_share_t::lock_reader(bool from_queue_wait)
 void queue_share_t::unlock_reader(bool from_queue_wait, bool force_compaction)
 {
   pthread_rwlock_unlock(&rwlock);
-  
+
   if (! from_queue_wait) {
     queue_connection_t *conn = queue_connection_t::current();
     assert(conn != NULL);
     --conn->reader_lock_cnt;
   }
-  
+
   // trigger compactation
   if ((force_compaction || ! from_queue_wait)
       && pthread_mutex_trylock(&compact_mutex) == 0) {
@@ -1133,18 +1133,18 @@ bool queue_share_t::wake_listeners(bool from_writer)
 {
   bool use_cond_expr = false;
   my_off_t off = (my_off_t)-1, row_id = 0;
-  
+
   /* note: lock order should always be: listener_mutex -> rwlock -> mutex */
   if (timedlock_mutex(&listener_mutex, 10) != 0) {
     return false;
   }
-  
+
   /* acquire rwlock */
   if (pthread_rwlock_tryrdlock(&rwlock) != 0) {
     pthread_mutex_unlock(&listener_mutex);
     return false;
   }
-  
+
 #ifdef Q4M_USE_MMAP
   /* remap if called from writer */
   if (from_writer
@@ -1162,7 +1162,7 @@ bool queue_share_t::wake_listeners(bool from_writer)
     }
   }
 #endif
-  
+
   // remove listeners with signals received
   listener_list_t::iterator l = listener_list.begin();
   while (l != listener_list.end()) {
@@ -1182,7 +1182,7 @@ bool queue_share_t::wake_listeners(bool from_writer)
   if (listener_list.size() == 0) {
     goto RETURN;
   }
-  
+
   { // per-listener test
     cac_mutex_t<info_t>::lockref info(this->info);
     if (info->delete_is_running)
@@ -1217,7 +1217,7 @@ bool queue_share_t::wake_listeners(bool from_writer)
       }
     }
   }
-  
+
  RETURN:
   pthread_rwlock_unlock(&rwlock);
   pthread_mutex_unlock(&listener_mutex);
@@ -1244,7 +1244,7 @@ struct queue_reset_owner_update_cond_expr {
 my_off_t queue_share_t::reset_owner(queue_connection_t *conn)
 {
   my_off_t off = 0;
-  
+
   // find the row to be released, and remove it from owner list
   if (conn->share_owned != NULL) {
     if (concurrent_compaction) {
@@ -1259,7 +1259,7 @@ my_off_t queue_share_t::reset_owner(queue_connection_t *conn)
       pthread_rwlock_unlock(&rwlock);
     }
   }
-  
+
   return off;
 }
 
@@ -1269,11 +1269,11 @@ int queue_share_t::write_rows(const void *rows, size_t rows_size,
   queue_connection_t *conn = queue_connection_t::current();
   queue_source_t *source =
     conn != NULL && conn->source.offset() != 0 ? &conn->source : NULL;
-  
+
   append_t a(rows, rows_size, row_count, source);
-  
+
   cac_mutex_t<info_t>::lockref info(this->info);
-  
+
   if (source != NULL && ! conn->reset_source
       && (source->offset()
 	  <= info->_header.last_received_offset(source->sender()))) {
@@ -1288,7 +1288,7 @@ int queue_share_t::write_rows(const void *rows, size_t rows_size,
   do {
     pthread_cond_wait(c, this->info.mutex());
   } while (a.err == -1);
-  
+
   if (source != NULL) {
     *source = queue_source_t(0, 0);
   }
@@ -1331,7 +1331,7 @@ int queue_share_t::overwrite_byte(char byte, my_off_t off)
     }
   }
 #endif
-  
+
   if (sys_pwrite(fd, &byte, 1, off) != 1) {
     err = HA_ERR_CRASHED_ON_USAGE;
   }
@@ -1341,9 +1341,9 @@ int queue_share_t::overwrite_byte(char byte, my_off_t off)
 int queue_share_t::next(my_off_t *_off, my_off_t *row_id)
 {
   my_off_t off = *_off;
-  
+
   assert(off <= info.unsafe_ref()->_header.end());
-  
+
   if (off == info.unsafe_ref()->_header.end()) {
     return 0;
   }
@@ -1407,16 +1407,16 @@ int queue_share_t::remove_rows(my_off_t *offsets, int cnt)
 # else
   remove_t r;
 # endif
-  
+
   cac_mutex_t<info_t>::lockref info(this->info);
-  
+
   r.attach_back(info->remove_list);
   pthread_cond_t *c = info->remove_response_cond;
   pthread_cond_signal(&info->to_writer_cond);
   do {
     pthread_cond_wait(c, this->info.mutex());
   } while (r.err == -1);
-  
+
   return r.err;
 #endif
 }
@@ -1460,7 +1460,7 @@ my_off_t queue_share_t::assign_owner(info_t *info, queue_connection_t *conn,
   } else if (next(&off, &row_id) != 0) {
     return 0;
   }
-  
+
   while (off != info->_header.end()) {
     cond_expr->pos = off;
     cond_expr->row_id = row_id;
@@ -1483,7 +1483,7 @@ my_off_t queue_share_t::assign_owner(info_t *info, queue_connection_t *conn,
     }
   }
   return 0;
-  
+
  FOUND:
   conn->share_owned = this;
   conn->owned_row_off = off;
@@ -1530,13 +1530,13 @@ queue_share_t::cond_expr_t *
 queue_share_t::compile_cond_expr(info_t *info, const char *expr, size_t len)
 {
   cond_expr_t *e;
-  
+
   if (expr == NULL) {
     return &cond_expr_true;
   }
-  
+
   stat_cond_compile.incr();
-  
+
   // return an existing one, if any
   if ((e = info->active_cond_exprs) != NULL) {
     do {
@@ -1559,7 +1559,7 @@ queue_share_t::compile_cond_expr(info_t *info, const char *expr, size_t len)
       }
     } while ((e = e->next()) != info->inactive_cond_exprs);
   }
-  
+
   // compile and return
   pthread_mutex_lock(&compile_expr_mutex);
   queue_cond_t::node_t *n = info->cond_eval.compile_expression(expr, len);
@@ -1577,7 +1577,7 @@ void queue_share_t::release_cond_expr(cond_expr_t *e)
   if (e == &cond_expr_true) {
     return;
   }
-  
+
   cac_mutex_t<info_t>::lockref info(this->info);
   assert(e->ref_cnt != 0);
   if (--e->ref_cnt == 0) {
@@ -1628,7 +1628,7 @@ my_off_t queue_share_t::check_cond_and_wake(info_t *info, my_off_t off,
       break;
     }
   }
-  
+
   return 0;
 }
 
@@ -1719,7 +1719,7 @@ int queue_share_t::writer_do_append(append_list_t *l)
     info->_header.set_bytes_total(info->_header.bytes_total()
                                   + bytes_total_add);
   }
-  
+
   q4m_my_free(iov[0].iov_base, MYF(0));
   return 0;
 }
@@ -1727,7 +1727,7 @@ int queue_share_t::writer_do_append(append_list_t *l)
 int queue_share_t::do_remove_rows(my_off_t *offsets, int cnt)
 {
   int err = 0;
-  
+
   for (int i = 0; i < cnt && err == 0; i++) {
     queue_row_t row;
     my_off_t off = offsets[i];
@@ -1785,7 +1785,7 @@ int queue_share_t::do_remove_rows(my_off_t *offsets, int cnt)
       err = HA_ERR_CRASHED_ON_USAGE;
     }
   }
-  
+
   return err;
 }
 
@@ -1794,7 +1794,7 @@ int queue_share_t::do_remove_rows(my_off_t *offsets, int cnt)
 void queue_share_t::writer_do_remove(remove_t* l)
 {
   stat_writer_remove.incr();
-  
+
   remove_t *r = l;
   do {
 #if Q4M_DELETE_METHOD == Q4M_DELETE_SERIAL_PWRITE
@@ -1809,7 +1809,7 @@ void queue_share_t::writer_do_remove(remove_t* l)
 void *queue_share_t::writer_start()
 {
   cac_mutex_t<info_t>::lockref info(this->info);
-  
+
   while (1) {
     /* wait for signal if we do not have any pending writes */
     do {
@@ -1953,11 +1953,11 @@ my_off_t queue_share_t::compact_do_copy(queue_compact_writer &writer, info_t* in
   *row_count = 0;
   *bytes_alive = 0;
   size_t rows_removed = 0;
-  
+
   if (concurrent_compaction) {
     pthread_mutex_unlock(this->info.mutex());
   }
-  
+
   while (off != end_off) {
     queue_row_t row;
     if (read(&row, off, queue_row_t::header_size())
@@ -2022,7 +2022,7 @@ my_off_t queue_share_t::compact_do_copy(queue_compact_writer &writer, info_t* in
       goto ERROR;
     }
     off = row.next(off);
-    
+
     if (concurrent_compaction
 	&& (last_compact_check_off + concurrent_compaction_interval
 	    < writer.off)) {
@@ -2062,18 +2062,18 @@ my_off_t queue_share_t::compact_do_copy(queue_compact_writer &writer, info_t* in
       }
     }
   }
-  
+
   if (rows_removed != 0 && ! writer.append_rows_removed(rows_removed)) {
     log("I/O error\n");
     goto ERROR;
   }
   writer.flush();
-  
+
   if (concurrent_compaction) {
     pthread_mutex_lock(this->info.mutex());
     assert(end_off == info->_header.end());
   }
-  
+
   return new_begin;
  ERROR:
   if (concurrent_compaction) {
@@ -2087,12 +2087,12 @@ int queue_share_t::compact(info_t *info)
   log("starting table compaction: %s (begin: %llu, end: %llu, rows: %llu)\n",
       table_name, info->_header.begin(), info->_header.end(),
       info->_header.row_count());
-  
+
   char filename[FN_REFLEN], tmp_filename[FN_REFLEN];
   int tmp_fd;
   queue_file_header_t tmp_hdr;
   tmp_hdr.set_attr(tmp_hdr.attr() | queue_file_header_t::attr_is_dirty);
-  
+
   /* reset owned_row_off_post_compact */
   if (info->rows_owned != NULL) {
     queue_connection_t *c = info->rows_owned;
@@ -2111,7 +2111,7 @@ int queue_share_t::compact(info_t *info)
     log("failed to create temporary file: %s\n", tmp_filename);
     goto ERR_RETURN;
   }
-  { 
+  {
     queue_compact_writer writer(this, tmp_fd,
 				sizeof(tmp_hdr) + queue_row_t::checksum_size());
     my_off_t new_begin, row_count, bytes_total;
@@ -2209,12 +2209,12 @@ int queue_share_t::compact(info_t *info)
     } while (c != info->rows_owned);
   }
   apply_cond_exprs(info, cond_expr_reset_pos_t());
-  
+
   log("finished table compaction: %s (begin: %llu, end: %llu, rows: %llu)\n",
       table_name, info->_header.begin(), info->_header.end(),
       info->_header.row_count());
   return 0;
-    
+
  ERR_OPEN:
   close(tmp_fd);
   unlink(tmp_filename);
@@ -2228,7 +2228,7 @@ queue_connection_t *queue_connection_t::current(bool create_if_empty)
 {
   queue_connection_t *conn =
     static_cast<queue_connection_t*>(thd_get_ha_data(current_thd, queue_hton));
-  
+
   if (conn == NULL && create_if_empty) {
     conn = new queue_connection_t();
     thd_set_ha_data(current_thd, queue_hton, conn);
@@ -2241,7 +2241,7 @@ int queue_connection_t::close(handlerton *hton, THD *thd)
 {
   queue_connection_t *conn =
     static_cast<queue_connection_t*>(thd_get_ha_data(current_thd, queue_hton));
-  
+
   if (conn->share_owned != NULL) {
     if (conn->share_owned->reset_owner(conn) != 0) {
       conn->share_owned->wake_listeners();
@@ -2252,7 +2252,7 @@ int queue_connection_t::close(handlerton *hton, THD *thd)
   }
   delete conn;
   --cnt;
-  
+
   return 0;
 }
 
@@ -2320,7 +2320,7 @@ int ha_queue::open(const char *name, int mode, uint test_if_locked, const dd::Ta
   }
   share->init_fixed_fields(table);
   thr_lock_data_init(share->get_store_lock(), &lock, NULL);
-  
+
   return 0;
 }
 
@@ -2329,7 +2329,7 @@ int ha_queue::close()
   assert(share != NULL);
   share->release();
   share = NULL;
-  
+
   return 0;
 }
 
@@ -2377,14 +2377,14 @@ int ha_queue::rnd_end()
 int ha_queue::rnd_next(uchar *buf)
 {
   assert(rows_size == 0);
-  
+
   int err = HA_ERR_END_OF_FILE;
-  
+
   if (defer_reader_lock) {
     share->lock_reader();
     defer_reader_lock = false;
   }
-  
+
   queue_connection_t *conn;
   if ((conn = queue_connection_t::current()) != NULL && conn->owner_mode) {
     if (pos == 0 && conn->share_owned == share
@@ -2423,7 +2423,7 @@ int ha_queue::rnd_next(uchar *buf)
       owns_delete_lock = true;
     }
   }
-  
+
   { /* read data to row buffer */
     queue_row_t hdr;
     if (share->read(&hdr, pos, queue_row_t::header_size())
@@ -2447,7 +2447,7 @@ int ha_queue::rnd_next(uchar *buf)
       goto EXIT;
     }
   }
-  
+
   /* unlock and convert to internal representation */
   unpack_row(buf);
 #if MYSQL_VERSION_ID < 80000
@@ -2456,7 +2456,7 @@ int ha_queue::rnd_next(uchar *buf)
   table->set_found_row();
 #endif
   return 0;
-  
+
  EXIT:
 #if MYSQL_VERSION_ID < 80000
   table->status = STATUS_NOT_FOUND;
@@ -2474,9 +2474,9 @@ void ha_queue::position(const uchar *record)
 int ha_queue::rnd_pos(uchar *buf, uchar *_pos)
 {
   assert(rows_size == 0);
-  
+
   pos = my_get_ptr(_pos, ref_length);
-  
+
   /* we should return the row even if it had the deleted flag set during the
    * execution by other threads
    */
@@ -2491,7 +2491,7 @@ int ha_queue::rnd_pos(uchar *buf, uchar *_pos)
   if (share->read(rows, pos, hdr.size()) != static_cast<ssize_t>(hdr.size())) {
     return HA_ERR_CRASHED_ON_USAGE;
   }
-  
+
   unpack_row(buf);
   return 0;
 }
@@ -2506,7 +2506,7 @@ ha_rows ha_queue::records()
 {
   queue_connection_t *conn;
   my_off_t rc;
-  
+
   if ((conn = queue_connection_t::current()) != NULL && conn->owner_mode) {
     rc = 0;
     if (conn->share_owned == share) {
@@ -2530,7 +2530,7 @@ ha_rows ha_queue::records()
   } else {
     rc = cac_mutex_t<queue_share_t::info_t>::lockref(share->info)->_header.row_count();
   }
-  
+
   return rc;
 }
 
@@ -2548,7 +2548,7 @@ THR_LOCK_DATA **ha_queue::store_lock(THD *thd, THR_LOCK_DATA **to,
       lock.type = lock_type;
     }
   }
-  
+
   *to++= &lock;
   return to;
 }
@@ -2563,18 +2563,18 @@ int ha_queue::create(const char *name, TABLE *table_arg,
 {
   char filename[FN_REFLEN];
   int fd;
-  
+
   fn_format(filename, name, "", Q4M, MY_REPLACE_EXT | MY_UNPACK_FILENAME);
-  
+
   queue_share_t* old_share = queue_share_t::get_share(name, false);
-  
+
   /* set is_dropping_table flag to prevent the compaction thread from overriting .Q4M
    */
   if (old_share != NULL) {
     cac_mutex_t<queue_share_t::info_t>::lockref info(old_share->info);
     info->is_dropping_table = true;
   }
-  
+
   /* unlink existing file (if exists, is the case for TRUNCATE TABLE) instead
    * of using O_TRUNC so that already-establised connections can still refer
    * to the data (NOTE: the call to this function is serialized by LOCK_open)
@@ -2597,7 +2597,7 @@ int ha_queue::create(const char *name, TABLE *table_arg,
   }
   sync_file(fd);
   ::close(fd);
-  
+
   /* close the existing share that holds the descriptor pointing to the old file
    * (or the share will persist until the number of owning connections become
    * zero at some point)
@@ -2606,9 +2606,9 @@ int ha_queue::create(const char *name, TABLE *table_arg,
     old_share->detach();
     old_share->release();
   }
-  
+
   return 0;
-  
+
  ERROR:
   ::close(fd);
   unlink(filename);
@@ -2625,7 +2625,7 @@ void ha_queue::start_bulk_insert(ha_rows rows __attribute__((unused)))
 int ha_queue::end_bulk_insert()
 {
   int ret = 0;
-  
+
   if (rows_size != 0) {
     ret = share->write_rows(rows, rows_size, bulk_insert_rows);
     switch (ret) {
@@ -2640,7 +2640,7 @@ int ha_queue::end_bulk_insert()
   }
   free_rows_buffer();
   bulk_insert_rows = static_cast<size_t>(-1);
-  
+
   return ret;
 }
 
@@ -2654,7 +2654,7 @@ bool ha_queue::start_bulk_delete()
 int ha_queue::end_bulk_delete()
 {
   int ret = 0;
-  
+
   assert(bulk_delete_rows != NULL);
   if (bulk_delete_rows->size() != 0) {
     ret =
@@ -2662,7 +2662,7 @@ int ha_queue::end_bulk_delete()
   }
   delete bulk_delete_rows;
   bulk_delete_rows = NULL;
-  
+
   return ret;
 }
 
@@ -2670,7 +2670,7 @@ int ha_queue::write_row(uchar *buf)
 {
   queue_connection_t *conn = queue_connection_t::current();
   size_t sz;
-  
+
   if (conn != NULL && conn->source.offset() != 0) {
     sz = pack_row(buf, &conn->source);
   } else {
@@ -2696,7 +2696,7 @@ int ha_queue::write_row(uchar *buf)
     rows_size += sz;
     bulk_insert_rows++;
   }
-  
+
   return 0;
 }
 
@@ -2709,7 +2709,7 @@ int ha_queue::update_row(const uchar *old_data __attribute__((unused)),
 int ha_queue::delete_row(const uchar *buf __attribute__((unused)))
 {
   int err = 0;
-  
+
   if (bulk_delete_rows != NULL) {
     bulk_delete_rows->push_back(pos);
   } else {
@@ -2717,7 +2717,7 @@ int ha_queue::delete_row(const uchar *buf __attribute__((unused)))
     err = share->remove_rows(&pos, 1);
     share->unlock_reader();
   }
-  
+
   return err;
 }
 
@@ -2742,6 +2742,53 @@ int ha_queue::delete_table(const char *name, const dd::Table *tbl)
 #else
   return handler::delete_table(name, tbl);
 #endif
+}
+
+#if MYSQL_VERSION_ID < 80000
+int ha_queue::rename_table(const char *from, const char *to)
+#else
+int ha_queue::rename_table(const char *from, const char *to, const dd::Table *from_table_def, dd::Table *to_table_def)
+#endif
+{
+  char from_filename[FN_REFLEN], to_filename[FN_REFLEN];
+
+  /* Format the file names */
+  fn_format(from_filename, from, "", Q4M, MY_REPLACE_EXT | MY_UNPACK_FILENAME);
+  fn_format(to_filename, to, "", Q4M, MY_REPLACE_EXT | MY_UNPACK_FILENAME);
+
+  /* Check if source file exists */
+  if (access(from_filename, F_OK) != 0) {
+    log("source table file does not exist: %s\n", from_filename);
+    return HA_ERR_GENERIC;
+  }
+
+  /* Check if destination file already exists */
+  if (access(to_filename, F_OK) == 0) {
+    log("destination table file already exists: %s\n", to_filename);
+    return HA_ERR_GENERIC;
+  }
+
+  /* Rename the data file */
+  if (rename(from_filename, to_filename) != 0) {
+    log("failed to rename table file: %s => %s (errno: %d)\n", from_filename, to_filename, errno);
+    return HA_ERR_GENERIC;
+  }
+
+  /* Close any existing share for the old table name */
+  queue_share_t *old_share = queue_share_t::get_share(from, true);
+  if (old_share != NULL) {
+    old_share->detach();
+    old_share->release();
+  }
+
+  /* Close any existing share for the new table name */
+  queue_share_t *new_share = queue_share_t::get_share(to, true);
+  if (new_share != NULL) {
+    new_share->detach();
+    new_share->release();
+  }
+
+  return 0;
 }
 
 int ha_queue::prepare_rows_buffer(size_t sz)
@@ -2788,7 +2835,7 @@ void ha_queue::unpack_row(uchar *buf)
   const uchar *src = rows + queue_row_t::header_size();
   Field **field;
   queue_fixed_field_t * const * fixed;
-  
+
   memcpy(buf, src, table->s->null_bytes);
   src += table->s->null_bytes;
   for (field = table->field, fixed = share->get_fixed_fields();
@@ -2888,7 +2935,7 @@ static queue_share_t* get_share_check(const char* db_table_name)
   char buf[FN_REFLEN];
   char path[FN_REFLEN];
   const char *db, *tbl;
-  
+
   // FIXME: creates bogus name if db_table_name is too long (but no overruns)
   if ((tbl = strchr(db_table_name, '.')) != NULL) {
     size_t db_len = min(static_cast<size_t>(tbl - db_table_name),
@@ -2908,7 +2955,7 @@ static queue_share_t* get_share_check(const char* db_table_name)
   if (db == NULL) {
     return NULL;
   }
-  
+
   build_table_filename(path, FN_REFLEN - 1, db, tbl, "", 0);
   queue_share_t *share = queue_share_t::get_share(path);
   if (share != NULL && ! share->init_fixed_fields()) {
@@ -2923,7 +2970,7 @@ static bool show_engine_status(handlerton *hton, THD *thd, stat_print_fn *print)
 {
   vector<char> out;
   char buf[256];
-  
+
   // dump stat values
   pthread_mutex_lock(&stat_mutex);
 
@@ -2939,7 +2986,7 @@ static bool show_engine_status(handlerton *hton, THD *thd, stat_print_fn *print)
     out.insert(out.end(), buf, buf + strlen(buf)); \
   } while (0)
 #define DUMP(n) DUMP2(n, #n)
-  
+
   HEADER("I/O calls");
   DUMP(sys_read);
   DUMP(sys_write);
@@ -2960,14 +3007,14 @@ static bool show_engine_status(handlerton *hton, THD *thd, stat_print_fn *print)
   DUMP(queue_abort);
   DUMP(queue_rowid);
   DUMP(queue_set_srcid);
-  
+
 #undef SEP
 #undef HEADER
 #undef DUMP2
 #undef DUMP
-  
+
   pthread_mutex_unlock(&stat_mutex);
-  
+
   return (*print)(thd, "QUEUE", 5, "", 0, &*out.begin(), out.size());
 }
 
@@ -3025,7 +3072,7 @@ static int init_plugin(void *p)
   queue_hton->create = create_handler;
   queue_hton->show_status = show_status;
   queue_hton->flags = HTON_CAN_RECREATE;
-  
+
   return 0;
 }
 
@@ -3046,7 +3093,7 @@ static int deinit_plugin(void *p)
   pthread_mutex_destroy(&listener_mutex);
   pthread_mutex_destroy(&open_mutex);
   queue_hton = NULL;
-  
+
   return 0;
 }
 
@@ -3133,7 +3180,7 @@ public:
     } while ((l = l->next()) != locks);
   }
 };
-  
+
 static int _queue_wait_core(char **share_names, int num_shares, int timeout,
 			    char *error)
 {
@@ -3144,11 +3191,11 @@ static int _queue_wait_core(char **share_names, int num_shares, int timeout,
   queue_share_t::cond_expr_t **cond_exprs;
   int share_owned = -1;
   queue_connection_t *conn = queue_connection_t::current(true);
-  
+
   *error = 0;
-  
+
   conn->erase_owned();
-  
+
   /* setup */
   shares = static_cast<queue_share_t**>(sql_calloc(num_shares * sizeof(queue_share_t*)));
   memset(shares, 0, num_shares * sizeof(queue_share_t*));
@@ -3156,7 +3203,7 @@ static int _queue_wait_core(char **share_names, int num_shares, int timeout,
   locks_buf = static_cast<share_lock_t*>(sql_calloc(num_shares * sizeof(share_lock_t)));
   cond_exprs = static_cast<queue_share_t::cond_expr_t**>(sql_calloc(num_shares * sizeof(queue_share_t::cond_expr_t*)));
   memset(cond_exprs, 0, num_shares * sizeof(queue_share_t::cond_expr_t*));
-  
+
   /* setup, or immediately break if data found, note that locks for the tables
    * are not released until all the tables are scanned, in order NOT to return
    * a row of a lower-priority table */
@@ -3249,7 +3296,7 @@ static int _queue_wait_core(char **share_names, int num_shares, int timeout,
   }
   /* always enter owner-mode, regardless whether or not we own a row */
   conn->owner_mode = true;
-  
+
  EXIT:
   for (int i = 0; i < num_shares && cond_exprs[i] != NULL; i++) {
     shares[i]->release_cond_expr(cond_exprs[i]);
@@ -3300,7 +3347,7 @@ my_bool queue_wait_init(UDF_INIT *initid, UDF_ARGS *args, char *message)
     args->maybe_null[i] = 0;
   }
   initid->maybe_null = 0;
-  
+
   return 0;
 }
 
@@ -3314,7 +3361,7 @@ long long queue_wait(UDF_INIT *initid __attribute__((unused)), UDF_ARGS *args,
   stat_queue_wait.incr();
   int timeout = args->arg_count >= 2
     ? *reinterpret_cast<long long*>(args->args[args->arg_count - 1]) : 60;
-  
+
   *is_null = 0;
   return
     _queue_wait_core(args->args, max((int)args->arg_count - 1, 1), timeout,
@@ -3340,11 +3387,11 @@ long long queue_end(UDF_INIT *initid __attribute__((unused)),
 {
   stat_queue_end.incr();
   queue_connection_t *conn;
-  
+
   if ((conn = queue_connection_t::current()) != NULL) {
     conn->erase_owned();
   }
-  
+
   *is_null = 0;
   return 1;
 }
@@ -3371,7 +3418,7 @@ long long queue_abort(UDF_INIT *initid, UDF_ARGS *args __attribute__((unused)),
 {
   stat_queue_abort.incr();
   queue_connection_t *conn;
-  
+
   if ((conn = queue_connection_t::current()) != NULL) {
     if (conn->share_owned != NULL) {
       if (conn->share_owned->reset_owner(conn) != 0) {
@@ -3385,7 +3432,7 @@ long long queue_abort(UDF_INIT *initid, UDF_ARGS *args __attribute__((unused)),
     }
     conn->owner_mode = false;
   }
-  
+
   *is_null = 0;
   return 1;
 }
